@@ -140,7 +140,7 @@ jobs:
 
       - name: Validar VM
         run: |
-          az vm get-instance-view \
+          az vm show \
             --name "$VM_NAME" \
             --resource-group "$RESOURCE_GROUP" \
             --output table
