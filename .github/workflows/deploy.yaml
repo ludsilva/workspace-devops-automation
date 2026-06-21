@@ -17,6 +17,11 @@ jobs:
     if: ${{ github.event.inputs.destroy == 'false' }}
     name: Validar Terraform
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_resource_group_name: ${{ secrets.RESOURCE_GROUP_NAME }}
+      TF_VAR_location: ${{ secrets.LOCATION }}
+      TF_VAR_admin_password: ${{ secrets.ADMIN_PASSWORD }}
+
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -31,19 +36,22 @@ jobs:
 
       - name: Terraform Validate
         working-directory: infra
-        env:
-          TF_VAR_admin_password: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           terraform init
           terraform fmt -check
           terraform validate
-          terraform plan -out=tfplan
+          terraform plan -out=tfplan -input=false
 
   deploy:
     if: ${{ github.event.inputs.destroy == 'false' }}
     name: Deploy e Configuração
     needs: validate
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_resource_group_name: ${{ secrets.RESOURCE_GROUP_NAME }}
+      TF_VAR_location: ${{ secrets.LOCATION }}
+      TF_VAR_admin_password: ${{ secrets.ADMIN_PASSWORD }}
+
     outputs:
       vmName: ${{ steps.outputs.outputs.vm_name }}
       adminUsername: ${{ steps.outputs.outputs.admin_username }}
@@ -65,8 +73,6 @@ jobs:
 
       - name: Terraform Apply
         working-directory: infra
-        env:
-          TF_VAR_admin_password: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           terraform init
           terraform apply -auto-approve
@@ -127,7 +133,10 @@ jobs:
 
           echo "Status HTTP: $STATUS"
 
-          test "$STATUS" = "200"
+          if [ "$STATUS" != "200" ]; then
+            echo "Swagger indisponível"
+            exit 1
+          fi
 
       - name: Validar VM
         run: |
@@ -147,6 +156,11 @@ jobs:
     if: ${{ github.event.inputs.destroy == 'true' }}
     name: Destroy
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_resource_group_name: ${{ secrets.RESOURCE_GROUP_NAME }}
+      TF_VAR_location: ${{ secrets.LOCATION }}
+      TF_VAR_admin_password: ${{ secrets.ADMIN_PASSWORD }}
+
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -161,8 +175,6 @@ jobs:
 
       - name: Terraform Destroy
         working-directory: infra
-        env:
-          TF_VAR_admin_password: ${{ secrets.ADMIN_PASSWORD }}
         run: |
           terraform init
           terraform destroy -auto-approve
